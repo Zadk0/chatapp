@@ -1,0 +1,81 @@
+# render.yaml - Configuración de despliegue para Render.com
+# Guía: https://render.com/docs/render-yaml-spec
+
+services:
+  # ─── WEB SERVICE (PHP/Laravel) ─────────────────────────────────────────────
+  - type: web
+    name: chatapp
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: APP_NAME
+        value: ChatApp
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true  # Render genera automáticamente
+      - key: APP_URL
+        fromService:
+          name: chatapp
+          type: web
+          property: host
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: chatapp-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: chatapp-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: chatapp-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: chatapp-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: chatapp-db
+          property: password
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_DRIVER
+        value: file
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: BROADCAST_DRIVER
+        value: reverb
+      - key: MAIL_MAILER
+        value: smtp
+      # Configurar estas en el dashboard de Render:
+      # MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS
+      - key: REVERB_APP_ID
+        value: chatapp
+      - key: REVERB_APP_KEY
+        generateValue: true
+      - key: REVERB_APP_SECRET
+        generateValue: true
+
+  # ─── WORKER (Queue + WebSocket) ────────────────────────────────────────────
+  - type: worker
+    name: chatapp-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    plan: free
+    envVars:
+      - fromGroup: chatapp-env
+
+# ─── BASE DE DATOS PostgreSQL ─────────────────────────────────────────────
+databases:
+  - name: chatapp-db
+    plan: free
+    databaseName: chatapp
+    user: chatapp_user
